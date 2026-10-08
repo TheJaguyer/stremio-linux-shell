@@ -50,6 +50,16 @@ impl Default for Video {
             init.set_property("video-sync", "audio")?;
             init.set_property("terminal", "yes")?;
             init.set_property("msg-level", msg_level)?;
+            // Pi 5: mpv's default high-quality scalers are too heavy for the V3D GPU.
+            init.set_property("profile", "fast")?;
+            // Extra options for tuning on a box without rebuilding, e.g. WEEBIO_MPV_OPTS="scale=bilinear,vd-lavc-threads=4"
+            if let Ok(opts) = env::var("WEEBIO_MPV_OPTS") {
+                for (key, value) in opts.split(',').filter_map(|opt| opt.split_once('=')) {
+                    if let Err(e) = init.set_property(key.trim(), value.trim()) {
+                        error!("Ignoring WEEBIO_MPV_OPTS entry {key}={value}: {e}");
+                    }
+                }
+            }
             Ok(())
         })
         .expect("Failed to create mpv");
