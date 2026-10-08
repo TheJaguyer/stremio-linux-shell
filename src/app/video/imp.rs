@@ -107,6 +107,15 @@ impl Video {
     }
 
     pub fn set_property<T: SetData>(&self, name: &str, value: T) {
+        // stremio-web always asks for hwdec=auto-copy; on the Pi we want to pick the method ourselves.
+        if name == "hwdec"
+            && let Ok(hwdec) = env::var("WEEBIO_HWDEC")
+        {
+            if let Err(e) = self.mpv.borrow().set_property(name, hwdec) {
+                error!("Failed to set property {name}: {e}");
+            }
+            return;
+        }
         if let Err(e) = self.mpv.borrow().set_property(name, value) {
             error!("Failed to set property {name}: {e}");
         }
