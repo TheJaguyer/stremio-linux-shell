@@ -204,6 +204,12 @@ impl WidgetImpl for Window {
             widget.remove_css_class("csd");
         }
 
+        // Kiosk boxes: always fill the screen, ignoring any remembered window size.
+        if std::env::var_os("WEEBIO_FULLSCREEN").is_some() {
+            widget.set_fullscreen(true);
+            return;
+        }
+
         let remember_window_state = settings.boolean("remember-window-state");
         if remember_window_state {
             let maximized = settings.boolean("window-maximized");
