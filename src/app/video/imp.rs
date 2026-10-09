@@ -16,7 +16,34 @@ use tracing::error;
 
 use crate::spawn_local;
 
+// libmpv's OpenGL backend creates a glFenceSync every frame (ra_gl_ctx_submit_frame) but only
+// deletes them in its own swap_buffers, which the render API never calls. On the Pi's v3d driver
+// every fence holds a sync_file fd, so the shell runs out of fds after ~1000 frames.
+// On GLES we hand mpv a glFenceSync that returns no fence, and hide glBufferStorageEXT so mpv
+// never uses the persistently mapped upload buffers that genuinely need those fences.
+extern "C" fn no_fence_sync(_condition: u32, _flags: u32) -> *mut c_void {
+    std::ptr::null_mut()
+}
+
+fn is_gles() -> bool {
+    static GLES: OnceLock<bool> = OnceLock::new();
+    *GLES.get_or_init(|| unsafe {
+        let version = epoxy::GetString(epoxy::VERSION);
+        !version.is_null()
+            && std::ffi::CStr::from_ptr(version.cast())
+                .to_bytes()
+                .starts_with(b"OpenGL ES")
+    })
+}
+
 fn get_proc_address(_context: &GLContext, name: &str) -> *mut c_void {
+    if is_gles() {
+        match name {
+            "glFenceSync" => return no_fence_sync as *const () as *mut c_void,
+            "glBufferStorage" | "glBufferStorageEXT" => return std::ptr::null_mut(),
+            _ => {}
+        }
+    }
     epoxy::get_proc_addr(name) as _
 }
 
