@@ -207,6 +207,21 @@ impl WidgetImpl for Window {
         // Kiosk boxes: always fill the screen, ignoring any remembered window size.
         if std::env::var_os("WEEBIO_FULLSCREEN").is_some() {
             widget.set_fullscreen(true);
+
+            // Many TVs drop HDMI hotplug while switched to another input, leaving the compositor with
+            // no output to fullscreen on. Ask again on whichever monitor (re)appears.
+            WidgetExt::display(&*widget).monitors().connect_items_changed(clone!(
+                #[weak]
+                widget,
+                move |monitors, position, _removed, added| {
+                    if added > 0
+                        && let Some(monitor) =
+                            monitors.item(position).and_downcast::<gtk::gdk::Monitor>()
+                    {
+                        widget.fullscreen_on_monitor(&monitor);
+                    }
+                }
+            ));
             return;
         }
 
