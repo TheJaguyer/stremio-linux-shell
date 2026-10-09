@@ -34,9 +34,12 @@ impl Window {
         window.overlay.add_overlay(&graphics_offload(widget));
     }
 
-    pub fn set_fullscreen(&self, fullscreen: bool) {
+    /// Returns the state actually applied: kiosk boxes (WEEBIO_FULLSCREEN) never leave fullscreen.
+    pub fn set_fullscreen(&self, fullscreen: bool) -> bool {
+        let fullscreen = fullscreen || std::env::var_os("WEEBIO_FULLSCREEN").is_some();
         self.imp().show_header(!fullscreen);
         self.set_fullscreened(fullscreen);
+        fullscreen
     }
 
     pub fn connect_visibility<T: Fn(bool) + 'static>(&self, callback: T) {

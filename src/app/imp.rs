@@ -142,7 +142,7 @@ impl ApplicationImpl for Application {
                             }
                         }
                         IpcEvent::Fullscreen(state) => {
-                            window.set_fullscreen(state);
+                            let state = window.set_fullscreen(state);
 
                             let message = ipc::create_response(IpcEvent::Fullscreen(state));
                             webview.send(&message);
