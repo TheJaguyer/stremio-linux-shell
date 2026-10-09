@@ -31,7 +31,12 @@ impl Server {
     pub fn start(&mut self, dev: bool) -> anyhow::Result<()> {
         let mut command = Command::new("node");
         command
-            .env("NO_CORS", (dev as i32).to_string())
+            // The Weebio UI is served by the local agent (127.0.0.1:8090), an origin server.js
+            // doesn't allow by default. (Note: server.js treats any non-empty value as true.)
+            .env(
+                "NO_CORS",
+                ((dev || env::var_os("WEEBIO_NO_CORS").is_some()) as i32).to_string(),
+            )
             .env("SERVER_IPC_KEY", IPC_KEY)
             .arg(self.file.as_os_str())
             .stdout(process::Stdio::piped())
